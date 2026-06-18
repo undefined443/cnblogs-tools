@@ -4,7 +4,7 @@
     "description": "Dump CNBlogs SQLite to Markdown",
     "main": "upload.js",
     "scripts": {
-        "prepare": "husky install"
+        "prepare": "husky"
     },
     "repository": {
         "type": "git",
