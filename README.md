@@ -6,6 +6,11 @@
 
 1. [导出博客备份](https://i.cnblogs.com/posts/export)并下载 SQLite 格式文件
 2. 将解压得到的 `.db` 文件放到项目根目录
+
+    ```sh
+    unzip ~/Downloads/cnblogs_blog_*.zip
+    ```
+
 3. 将 `.db` 文件转换为 Markdown 文件：
 
     ```sh

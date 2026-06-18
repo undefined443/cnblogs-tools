@@ -1,15 +1,15 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "dump",
-      "type": "shell",
-      "command": "python",
-      "args": ["main.py"],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
-    }
-  ]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "db2md",
+            "type": "shell",
+            "command": "uv",
+            "args": ["run", "db2md.py"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
 }
