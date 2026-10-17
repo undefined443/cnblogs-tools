@@ -60,8 +60,6 @@ def upload_posts(client, output_dir, dry_run=False):
         if str(metadata["id"]) != post_id or str(metadata["blog_id"]) != snapshot["blog_id"]:
             raise ValueError(f"Post or blog ID mismatch: {target.name}")
         changes.append((post_id, metadata, body, content))
-    if changes:
-        print("MetaWeblog cannot verify access permissions; publish does not mean public/private.")
     skipped_permissions = [
         (post_id, metadata) for post_id, metadata, _, _ in changes if metadata.get("access_permission") != "Anonymous"
     ]
