@@ -12,7 +12,7 @@ from unittest.mock import patch
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 
-from cnblogs_tools import backup, cli, images
+from cnblogs_tools import cli, images, post_files
 
 
 class ImagesTest(unittest.TestCase):
@@ -74,7 +74,7 @@ class ImagesTest(unittest.TestCase):
         target = self.posts / "1.md"
         target.write_bytes((prefix + f"![a]({first})\r\n![b]({second})\r\n").encode())
         self._migrate()
-        content = backup.read_post(target)
+        content = post_files.read_post(target)
         self.assertTrue(content.startswith(prefix))
         self.assertIn("https://example.com/image-hosting/2025/01/01/same-name.png", content)
         self.assertIn("https://example.com/image-hosting/2025/01/02/same-name.png", content)

@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 import time
+from contextlib import closing
 from pathlib import Path
 
 import yaml
@@ -21,7 +22,7 @@ def _parse_time(value):
 
 def _read_database(path):
     """Read post rows and column names from a SQLite export."""
-    with sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True) as connection:
+    with closing(sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)) as connection:
         cursor = connection.execute("SELECT * FROM blog_Content")
         blogs = cursor.fetchall()
         columns = [description[0] for description in cursor.description]

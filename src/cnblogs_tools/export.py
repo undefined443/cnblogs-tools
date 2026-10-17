@@ -7,6 +7,7 @@ import sqlite3
 import tempfile
 import time
 import zipfile
+from contextlib import closing
 from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
@@ -92,7 +93,7 @@ def download_database(config, backup_dir):
             database = Path(temporary_dir) / filename
             with exported.open(member) as source, database.open("wb") as output:
                 shutil.copyfileobj(source, output)
-        with sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True) as connection:
+        with closing(sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)) as connection:
             integrity = connection.execute("PRAGMA quick_check").fetchone()[0]
             count = connection.execute("SELECT COUNT(*) FROM blog_Content").fetchone()[0]
         if integrity != "ok" or count != record["exportedPostCount"]:

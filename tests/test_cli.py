@@ -46,7 +46,7 @@ class CliTest(unittest.TestCase):
             )
             self.assertEqual((output / ".backup.json").read_text(), content)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("0 changed posts", result.stdout)
+        self.assertIn("0 public posts ready", result.stdout)
 
     def test_invalid_dry_run_does_not_dispatch(self):
         """Reject unsupported dry-run commands before accessing files or credentials."""

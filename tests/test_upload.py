@@ -132,7 +132,7 @@ class UploadTest(unittest.TestCase):
         self._backup()
         for post_id in self.posts:
             meta, body = post_files.parse_post(post_files.read_post(self.output / f"{post_id}.md"))
-            self.assertEqual(body, self.posts[post_id]["description"].replace("\r\n", "\n"))
+            self.assertEqual(body, self.posts[post_id]["description"])
             self.assertNotIn("publish", meta)
             self.assertEqual(meta["access_permission"], "Anonymous")
         self.assertFalse(post_files.parse_post(post_files.read_post(self.output / "2.md"))[0]["is_markdown"])
@@ -189,7 +189,7 @@ class UploadTest(unittest.TestCase):
         target.write_text(
             post_files.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
         )
-        with patch.object(self.client, "get_post") as get_post:
+        with patch.object(self.client, "get_post", wraps=self.client.get_post) as get_post:
             self._upload()
             get_post.assert_called_once_with("1")
         self.assertEqual([edit[0] for edit in self._edits], ["1"])
@@ -305,12 +305,12 @@ class UploadTest(unittest.TestCase):
         backup_dir = Path(self.temp.name) / "backups"
         backup_dir.mkdir()
         db_path = backup_dir / "cnblogs_blog_test.20261017141356.db"
-        with sqlite3.connect(db_path) as db:
+        with contextlib.closing(sqlite3.connect(db_path)) as db, db:
             db.execute("CREATE TABLE blog_Content (" + ",".join(columns) + ")")
             db.execute("INSERT INTO blog_Content VALUES (" + ",".join("?" for _ in row) + ")", row)
         # A newer filesystem timestamp must not override the export timestamp.
         older = backup_dir / "cnblogs_blog_test.20260701015053.db"
-        with sqlite3.connect(older) as db:
+        with contextlib.closing(sqlite3.connect(older)) as db, db:
             db.execute("CREATE TABLE blog_Content (" + ",".join(columns) + ")")
             older_row = list(row)
             older_row[1] = "Older"
