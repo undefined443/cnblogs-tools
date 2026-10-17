@@ -1,8 +1,7 @@
 {
     "name": "cnblogs_dump",
     "version": "1.2.0",
-    "description": "Dump CNBlogs SQLite to Markdown",
-    "main": "upload.js",
+    "description": "Back up and update Cnblogs posts through MetaWeblog",
     "scripts": {
         "prepare": "husky"
     },
@@ -16,15 +15,6 @@
         "url": "https://github.com/Undefined443/cnblogs_dump/issues"
     },
     "homepage": "https://github.com/Undefined443/cnblogs_dump#readme",
-    "dependencies": {
-        "axios": "^1.11.0",
-        "dotenv": "^17.2.1",
-        "glob": "^11.0.3",
-        "js-yaml": "^4.1.0",
-        "sqlite": "^5.1.1",
-        "sqlite3": "^5.1.7"
-    },
-    "type": "module",
     "devDependencies": {
         "@eslint/js": "^9.33.0",
         "@eslint/json": "^0.13.1",

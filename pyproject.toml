@@ -1,10 +1,13 @@
 [project]
 name = "cnblogs-dump"
 version = "1.2.0"
-description = "Dump CNBlogs SQLite to Markdown"
+description = "Back up and update Cnblogs posts through MetaWeblog"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+]
 
 [tool.black]
 line-length = 120
@@ -15,3 +18,8 @@ dev = [
     "black>=25.1.0",
     "pre-commit>=4.3.0",
 ]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
