@@ -120,6 +120,7 @@ class SyncTest(unittest.TestCase):
         """Modify a fixture post and explicitly choose its publication flag."""
         target = self.output / f"{post_id}.md"
         text = backup.read_post(target)
+        text = text.replace("access_permission: null", "access_permission: Anonymous")
         text = text.replace("publish: null", "publish: true" if publish else "publish: false")
         target.write_text(text + "\nNew text & <tag>", encoding="utf-8")
 
@@ -130,6 +131,7 @@ class SyncTest(unittest.TestCase):
             meta, body = backup.parse_post(backup.read_post(self.output / f"{post_id}.md"))
             self.assertEqual(body, self.posts[post_id]["description"].replace("\r\n", "\n"))
             self.assertIsNone(meta["publish"])
+            self.assertIsNone(meta["access_permission"])
         self.assertFalse(backup.parse_post(backup.read_post(self.output / "2.md"))[0]["is_markdown"])
         before = (self.output / "1.md").stat().st_mtime_ns
         self._backup()
@@ -185,11 +187,56 @@ class SyncTest(unittest.TestCase):
         self._backup()
         self._edit("1")
         target = self.output / "2.md"
-        target.write_text(backup.read_post(target) + "\nChanged")
+        target.write_text(
+            backup.read_post(target).replace("access_permission: null", "access_permission: Anonymous") + "\nChanged"
+        )
         with self.assertRaisesRegex(ValueError, "Set publish"):
             self._upload()
         self.assertEqual(self._edits, [])
         self._upload(dry_run=True)
+        self.assertEqual(self._edits, [])
+
+    def test_private_permissions_block_entire_batch(self):
+        """Reject a mixed batch before reading or writing any remote post."""
+        self._backup()
+        self._edit("1")
+        self._edit("2", publish=False)
+        target = self.output / "2.md"
+        target.write_text(
+            backup.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
+        )
+        with patch.object(self.client, "get_post") as get_post:
+            with self.assertRaisesRegex(ValueError, "Upload blocked.*2"):
+                self._upload()
+            get_post.assert_not_called()
+        self.assertEqual(self._edits, [])
+
+    def test_unknown_permissions_block_upload(self):
+        """Require explicit visibility confirmation for new and older backups."""
+        self._backup()
+        self._edit()
+        target = self.output / "1.md"
+        original = backup.read_post(target)
+        for permission in ("access_permission: null\n", ""):
+            with self.subTest(permission=permission):
+                target.write_text(original.replace("access_permission: Anonymous\n", permission))
+                with self.assertRaisesRegex(ValueError, "Upload blocked.*1"):
+                    self._upload()
+        self.assertEqual(self._edits, [])
+
+    def test_dry_run_reports_blocked_permissions_without_network(self):
+        """Show visibility restrictions without requiring a live client."""
+        self._backup()
+        self._edit()
+        target = self.output / "1.md"
+        target.write_text(
+            backup.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
+        )
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            upload.upload_posts(None, self.output, dry_run=True)
+        self.assertIn("Blocked 1", output.getvalue())
+        self.assertIn("OwnerByUser", output.getvalue())
         self.assertEqual(self._edits, [])
 
     def test_remote_conflict_prevents_all_updates(self):

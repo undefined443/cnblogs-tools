@@ -38,6 +38,7 @@ def _render_post(post, blog_id):
         "tags": post.get("mt_keywords", ""),
         "description": post.get("mt_excerpt", ""),
         "publish": None,
+        "access_permission": None,
     }
     front_matter = yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False)
     return f"---\n{front_matter}---\n{post['description']}"

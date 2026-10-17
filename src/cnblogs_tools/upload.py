@@ -61,11 +61,24 @@ def upload_posts(client, output_dir, dry_run=False):
             raise ValueError(f"Post or blog ID mismatch: {target.name}")
         post = _post_for_upload(metadata, body, baseline["post"])
         changes.append((post_id, metadata, post, content))
+    if changes:
+        print("MetaWeblog cannot verify access permissions; publish does not mean public/private.")
     if dry_run:
         for post_id, metadata, _, _ in changes:
-            print(f"Would update {post_id}; publish={metadata.get('publish')!r}")
+            permission = metadata.get("access_permission")
+            status = "Would update" if permission == "Anonymous" else "Blocked"
+            print(f"{status} {post_id}; publish={metadata.get('publish')!r}; access_permission={permission!r}")
         print(f"Dry run: {len(changes)} changed posts; no network requests made.")
         return
+    # Reject private and unverified posts before making any remote requests.
+    blocked = [post_id for post_id, metadata, _, _ in changes if metadata.get("access_permission") != "Anonymous"]
+    if blocked:
+        raise ValueError(
+            "Upload blocked for private or unknown access permissions: "
+            + ", ".join(blocked)
+            + ". Only upload confirmed public posts (access_permission: Anonymous); "
+            "publish controls publication, not visibility."
+        )
     # Validate every publication choice before updating any remote post.
     missing = [post_id for post_id, metadata, _, _ in changes if type(metadata.get("publish")) is not bool]
     if missing:
