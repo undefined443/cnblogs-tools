@@ -46,14 +46,6 @@ class MetaWeblogClient:
         """Close the underlying HTTP connection."""
         self._server("close")()
 
-    def get_blogs(self):
-        """List blogs accessible to the configured user."""
-        return self._server.blogger.getUsersBlogs("", self._username, self._token)
-
-    def get_recent_posts(self, blog_id, count):
-        """Read up to the requested number of posts returned by the service."""
-        return self._server.metaWeblog.getRecentPosts(blog_id, self._username, self._token, count)
-
     def get_post(self, post_id):
         """Read a post using its string ID."""
         return self._server.metaWeblog.getPost(str(post_id), self._username, self._token)

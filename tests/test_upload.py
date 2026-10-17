@@ -1,4 +1,4 @@
-"""Exercise backup/upload behavior through a local XML-RPC server."""
+"""Exercise full-export baselines and uploads through a local XML-RPC server."""
 
 import contextlib
 import copy
@@ -14,7 +14,9 @@ from pathlib import Path
 from unittest.mock import patch
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
-from cnblogs_tools import backup, config, database, upload
+import yaml
+
+from cnblogs_tools import config, database, post_files, upload
 from cnblogs_tools.metaweblog import MetaWeblogClient
 
 
@@ -24,8 +26,8 @@ class Handler(SimpleXMLRPCRequestHandler):
     rpc_paths = ("/metaweblog/example",)
 
 
-class SyncTest(unittest.TestCase):
-    """Verify actual XML encoding, file baselines, and update behavior."""
+class UploadTest(unittest.TestCase):
+    """Verify upload baselines, XML encoding, and update behavior."""
 
     def setUp(self):
         """Create isolated files and a local service for each test."""
@@ -56,8 +58,6 @@ class SyncTest(unittest.TestCase):
             },
         }
         self.http = SimpleXMLRPCServer(("127.0.0.1", 0), requestHandler=Handler, logRequests=False)
-        self.http.register_function(self._get_blogs, "blogger.getUsersBlogs")
-        self.http.register_function(self._get_recent, "metaWeblog.getRecentPosts")
         self.http.register_function(self._get_post, "metaWeblog.getPost")
         self.http.register_function(self._edit_post, "metaWeblog.editPost")
         self.thread = threading.Thread(target=self.http.serve_forever, daemon=True)
@@ -77,20 +77,6 @@ class SyncTest(unittest.TestCase):
         """Verify credentials decoded from the XML-RPC request."""
         self.assertEqual((username, token), ("login", "secret<&>"))
 
-    def _get_blogs(self, key, username, token):
-        """Return the accessible blog after checking authentication."""
-        self._auth(username, token)
-        self.assertEqual(key, "")
-        return [{"blogid": "42", "url": "https://www.cnblogs.com/example/", "blogName": "Example"}]
-
-    def _get_recent(self, blog_id, username, token, count):
-        """Return fixture posts or raise a simulated service fault."""
-        self._auth(username, token)
-        self.assertEqual(blog_id, "42")
-        if self.failure:
-            raise xmlrpc.client.Fault(401, "Authentication failed")
-        return list(self.posts.values())[:count]
-
     def _get_post(self, post_id, username, token):
         """Return a fixture post after validating its ID type."""
         self._auth(username, token)
@@ -107,9 +93,26 @@ class SyncTest(unittest.TestCase):
         return True
 
     def _backup(self):
-        """Run a backup without printing routine progress."""
-        with contextlib.redirect_stdout(io.StringIO()):
-            backup.backup_posts(self.client, self.output, 1000)
+        """Create a complete-export baseline for the fixture posts."""
+        self.output.mkdir(parents=True, exist_ok=True)
+        snapshot = {"blog_id": "42", "posts": {}}
+        for post_id, post in self.posts.items():
+            metadata = {
+                "id": int(post_id),
+                "title": post["title"],
+                "date": str(post["dateCreated"]),
+                "blog_id": 42,
+                "is_markdown": "[Markdown]" in post["categories"],
+                "is_active": True,
+                "access_permission": "Anonymous",
+            }
+            front_matter = yaml.safe_dump(metadata, allow_unicode=True, sort_keys=True)
+            content = f"---\n{front_matter}---\n{post['description']}"
+            target = self.output / f"{post_id}.md"
+            if not target.exists() or post_files.read_post(target) != content:
+                target.write_text(content, encoding="utf-8")
+            snapshot["posts"][post_id] = {"hash": post_files.digest(content)}
+        (self.output / ".backup.json").write_text(json.dumps(snapshot), encoding="utf-8")
 
     def _upload(self, dry_run=False):
         """Run an upload or local dry-run without progress output."""
@@ -119,43 +122,24 @@ class SyncTest(unittest.TestCase):
     def _edit(self, post_id="1", publish=True):
         """Modify a fixture post and explicitly choose its publication flag."""
         target = self.output / f"{post_id}.md"
-        text = backup.read_post(target)
-        text = text.replace("access_permission: null", "access_permission: Anonymous")
-        text = text.replace("publish: null", "publish: true" if publish else "publish: false")
-        target.write_text(text + "\nNew text & <tag>", encoding="utf-8")
+        metadata, body = post_files.parse_post(post_files.read_post(target))
+        metadata["publish"] = publish
+        front_matter = yaml.safe_dump(metadata, allow_unicode=True, sort_keys=True)
+        target.write_text(f"---\n{front_matter}---\n{body}\nNew text & <tag>", encoding="utf-8")
 
     def test_backup_preserves_format_and_is_idempotent(self):
         """Verify backup preserves format and is idempotent."""
         self._backup()
         for post_id in self.posts:
-            meta, body = backup.parse_post(backup.read_post(self.output / f"{post_id}.md"))
+            meta, body = post_files.parse_post(post_files.read_post(self.output / f"{post_id}.md"))
             self.assertEqual(body, self.posts[post_id]["description"].replace("\r\n", "\n"))
-            self.assertIsNone(meta["publish"])
-            self.assertIsNone(meta["access_permission"])
-        self.assertFalse(backup.parse_post(backup.read_post(self.output / "2.md"))[0]["is_markdown"])
+            self.assertNotIn("publish", meta)
+            self.assertEqual(meta["access_permission"], "Anonymous")
+        self.assertFalse(post_files.parse_post(post_files.read_post(self.output / "2.md"))[0]["is_markdown"])
         before = (self.output / "1.md").stat().st_mtime_ns
         self._backup()
         self.assertEqual(before, (self.output / "1.md").stat().st_mtime_ns)
         self.assertNotIn("secret", (self.output / ".backup.json").read_text())
-
-    def test_backup_preserves_local_changes_and_baseline(self):
-        """Verify backup preserves local changes and baseline."""
-        self._backup()
-        baseline = json.loads((self.output / ".backup.json").read_text())["posts"]["1"]
-        self._edit()
-        local = backup.read_post(self.output / "1.md")
-        self.posts["1"]["description"] = "Remote edit"
-        self._backup()
-        self.assertEqual(local, backup.read_post(self.output / "1.md"))
-        self.assertEqual(baseline, json.loads((self.output / ".backup.json").read_text())["posts"]["1"])
-
-    def test_untracked_file_is_preserved(self):
-        """Verify untracked file is preserved."""
-        self.output.mkdir()
-        (self.output / "1.md").write_text("Keep me")
-        self._backup()
-        self.assertEqual((self.output / "1.md").read_text(), "Keep me")
-        self.assertNotIn("1", json.loads((self.output / ".backup.json").read_text())["posts"])
 
     def test_successful_upload_preserves_categories_and_updates_baseline(self):
         """Verify successful upload preserves categories and updates baseline."""
@@ -188,7 +172,8 @@ class SyncTest(unittest.TestCase):
         self._edit("1")
         target = self.output / "2.md"
         target.write_text(
-            backup.read_post(target).replace("access_permission: null", "access_permission: Anonymous") + "\nChanged"
+            post_files.read_post(target).replace("access_permission: null", "access_permission: Anonymous")
+            + "\nChanged"
         )
         with self.assertRaisesRegex(ValueError, "Set publish"):
             self._upload()
@@ -203,7 +188,7 @@ class SyncTest(unittest.TestCase):
         self._edit("2", publish=False)
         target = self.output / "2.md"
         target.write_text(
-            backup.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
+            post_files.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
         )
         with patch.object(self.client, "get_post") as get_post:
             with self.assertRaisesRegex(ValueError, "Upload blocked.*2"):
@@ -216,7 +201,7 @@ class SyncTest(unittest.TestCase):
         self._backup()
         self._edit()
         target = self.output / "1.md"
-        original = backup.read_post(target)
+        original = post_files.read_post(target)
         for permission in ("access_permission: null\n", ""):
             with self.subTest(permission=permission):
                 target.write_text(original.replace("access_permission: Anonymous\n", permission))
@@ -230,7 +215,7 @@ class SyncTest(unittest.TestCase):
         self._edit()
         target = self.output / "1.md"
         target.write_text(
-            backup.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
+            post_files.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
         )
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
@@ -239,15 +224,14 @@ class SyncTest(unittest.TestCase):
         self.assertIn("OwnerByUser", output.getvalue())
         self.assertEqual(self._edits, [])
 
-    def test_remote_conflict_prevents_all_updates(self):
-        """Verify remote conflict prevents all updates."""
+    def test_upload_uses_current_remote_fields(self):
+        """Verify upload preserves fields from the current remote post."""
         self._backup()
         self._edit("1")
         self._edit("2")
         self.posts["2"]["title"] = "Remote change"
-        with self.assertRaisesRegex(ValueError, "Remote post 2 changed"):
-            self._upload()
-        self.assertEqual(self._edits, [])
+        self._upload()
+        self.assertEqual(len(self._edits), 2)
 
     def test_fault_does_not_advance_baseline(self):
         """Verify fault does not advance baseline."""
@@ -330,8 +314,11 @@ class SyncTest(unittest.TestCase):
         # A newer filesystem timestamp must not override the export timestamp.
         older = backup_dir / "cnblogs_blog_test.20260701015053.db"
         with sqlite3.connect(older) as db:
-            db.execute("CREATE TABLE blog_Content (Body)")
-            db.execute("INSERT INTO blog_Content VALUES ('Older export')")
+            db.execute("CREATE TABLE blog_Content (" + ",".join(columns) + ")")
+            older_row = list(row)
+            older_row[1] = "Older"
+            older_row[-1] = "Older export"
+            db.execute("INSERT INTO blog_Content VALUES (" + ",".join("?" for _ in row) + ")", older_row)
         os.utime(db_path, (1, 1))
         (Path(self.temp.name) / "cnblogs_blog_test.20270101000000.db").write_text("Ignore root files")
         previous = Path.cwd()

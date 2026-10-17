@@ -1,10 +1,12 @@
-"""Upload local edits after checking publication intent and remote conflicts."""
+"""Upload local edits tracked by a complete database export."""
 
 import datetime
 import json
 import xmlrpc.client
 
-from .backup import digest, parse_post, read_post, save_snapshot, serialize_post
+import yaml
+
+from .post_files import digest, parse_post, read_post, save_snapshot
 
 
 def _post_for_upload(metadata, body, original):
@@ -19,7 +21,7 @@ def _post_for_upload(metadata, body, original):
         "source",
     )
     post = {key: original[key] for key in fields if key in original}
-    categories = list(metadata["categories"])
+    categories = list(metadata.get("categories", original.get("categories", [])))
     if metadata["is_markdown"] and "[Markdown]" not in categories:
         categories.append("[Markdown]")
     elif not metadata["is_markdown"]:
@@ -30,24 +32,22 @@ def _post_for_upload(metadata, body, original):
             "description": body,
             "dateCreated": xmlrpc.client.DateTime(datetime.datetime.fromisoformat(str(metadata["date"]))),
             "categories": categories,
-            "mt_keywords": metadata["tags"],
-            "mt_excerpt": metadata["description"],
+            "mt_keywords": metadata.get("tags", original.get("mt_keywords", "")),
+            "mt_excerpt": metadata.get("description", original.get("mt_excerpt", "")),
         }
     )
     return post
 
 
 def upload_posts(client, output_dir, dry_run=False):
-    """Upload local edits after checking publication intent and remote conflicts.
+    """Upload local edits tracked by the complete database export.
 
     Args:
         client: Authenticated MetaWeblog client; unused in dry-run mode.
-        output_dir: Directory containing posts and the backup snapshot.
+        output_dir: Directory containing posts and the complete export baseline.
         dry_run: List local changes without making network requests.
     """
     snapshot = json.loads((output_dir / ".backup.json").read_text())
-    if not dry_run and snapshot["endpoint"] != client.endpoint:
-        raise ValueError("The configured endpoint differs from the backup endpoint.")
     changes = []
     for post_id, baseline in snapshot["posts"].items():
         target = output_dir / f"{post_id}.md"
@@ -59,8 +59,7 @@ def upload_posts(client, output_dir, dry_run=False):
         metadata, body = parse_post(content)
         if str(metadata["id"]) != post_id or str(metadata["blog_id"]) != snapshot["blog_id"]:
             raise ValueError(f"Post or blog ID mismatch: {target.name}")
-        post = _post_for_upload(metadata, body, baseline["post"])
-        changes.append((post_id, metadata, post, content))
+        changes.append((post_id, metadata, body, content))
     if changes:
         print("MetaWeblog cannot verify access permissions; publish does not mean public/private.")
     if dry_run:
@@ -83,16 +82,17 @@ def upload_posts(client, output_dir, dry_run=False):
     missing = [post_id for post_id, metadata, _, _ in changes if type(metadata.get("publish")) is not bool]
     if missing:
         raise ValueError("Set publish to true or false before uploading: " + ", ".join(missing))
-    for post_id, _, _, _ in changes:
+    for post_id, metadata, body, content in changes:
         current = client.get_post(post_id)
-        if serialize_post(current) != snapshot["posts"][post_id]["post"]:
-            raise ValueError(f"Remote post {post_id} changed after backup; resolve the conflict before uploading.")
-    for post_id, metadata, post, content in changes:
+        post = _post_for_upload(metadata, body, current)
         result = client.edit_post(post_id, post, metadata["publish"])
         if not result:
             raise ValueError(f"The server did not confirm update of post {post_id}.")
-        current = client.get_post(post_id)
-        snapshot["posts"][post_id] = {"hash": digest(content), "post": serialize_post(current)}
+        metadata.pop("publish")
+        content = f"---\n{yaml.safe_dump(metadata, allow_unicode=True, sort_keys=True)}---\n{body}"
+        target = output_dir / f"{post_id}.md"
+        target.write_text(content, encoding="utf-8", newline="")
+        snapshot["posts"][post_id] = {"hash": digest(content)}
         save_snapshot(output_dir, snapshot)
         print(f"Updated post {post_id}.")
     print(f"Uploaded {len(changes)} changed posts.")

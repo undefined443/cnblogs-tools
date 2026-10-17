@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 
-from .backup import parse_post, read_post
+from .post_files import parse_post, read_post
 
 
 def _download_image(url, image_dir):
