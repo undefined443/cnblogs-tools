@@ -5,9 +5,4 @@
 .env
 .venv/
 .idea/
-.husky/_
-build/
-dist/
 blogs/
-node_modules/
-.eslintcache

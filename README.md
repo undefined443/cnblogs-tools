@@ -77,6 +77,22 @@ uv run cnblogs.py database --output legacy-blogs
 
 SQLite 转换不生成 MetaWeblog 同步快照。通过 API 重新备份到一个新目录后，再迁入本地编辑并上传。
 
+## 开发检查
+
+安装提交钩子，统一检查 Python、Markdown、JSON、YAML 和 TOML 格式：
+
+```sh
+uv run pre-commit install
+```
+
+手动检查所有已跟踪文件：
+
+```sh
+uv run pre-commit run --all-files
+```
+
+Black 负责 Python，Prettier 负责 Markdown、JSON 和 YAML，Taplo 负责 TOML。Prettier 及其 Node 环境由 pre-commit 管理，无需运行 `npm install`。
+
 ## 接口参考
 
 - [MetaWeblog](docs/metaweblog.md)

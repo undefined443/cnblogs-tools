@@ -4,20 +4,14 @@ version = "1.2.0"
 description = "Back up and update Cnblogs posts through MetaWeblog"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "python-dotenv>=1.2.4",
-    "pyyaml>=6.0.3",
-]
+dependencies = ["python-dotenv>=1.2.4", "pyyaml>=6.0.3"]
 
 [tool.black]
 line-length = 120
-target-version = ["py313"] 
+target-version = ["py313"]
 
 [dependency-groups]
-dev = [
-    "black>=25.1.0",
-    "pre-commit>=4.3.0",
-]
+dev = ["black>=26.10.1", "pre-commit>=4.7.0"]
 
 [[tool.uv.index]]
 name = "pypi"
