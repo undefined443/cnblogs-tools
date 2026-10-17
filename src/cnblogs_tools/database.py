@@ -87,8 +87,9 @@ def _export_blogs_to_markdown(blogs, columns, output_dir, previous=None):
         if created_time and updated_time:
             os.utime(target, (created_time, updated_time))
         elif created_time or updated_time:
-            timestamp = created_time or updated_time
-            os.utime(target, (timestamp, timestamp))
+            timestamp = created_time if created_time is not None else updated_time
+            if timestamp is not None:
+                os.utime(target, (timestamp, timestamp))
         saved += 1
     snapshot = {"blog_id": str(dict(zip(columns, blogs[0]))["BlogId"]), "posts": baseline}
     temporary = output_dir / ".backup.json.tmp"

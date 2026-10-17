@@ -26,8 +26,18 @@ target-version = "py313"
 [tool.ruff.lint]
 select = ["F", "I"]
 
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+
 [dependency-groups]
-dev = ["black>=26.10.1", "pre-commit>=4.7.0", "ruff>=0.17.1"]
+dev = [
+  "black>=26.10.1",
+  "pre-commit>=4.7.0",
+  "pyright>=1.1.414",
+  "ruff>=0.17.1",
+]
 
 [[tool.uv.index]]
 name = "pypi"
