@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 
-from cnblogs_dump import backup, cli, images
+from cnblogs_tools import backup, cli, images
 
 
 class ImagesTest(unittest.TestCase):

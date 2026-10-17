@@ -48,7 +48,7 @@ wheels = [
 ]
 
 [[package]]
-name = "cnblogs-dump"
+name = "cnblogs-tools"
 version = "1.2.0"
 source = { editable = "." }
 dependencies = [

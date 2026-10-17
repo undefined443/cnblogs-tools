@@ -14,8 +14,8 @@ from unittest.mock import patch
 import xmlrpc.client
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
-from cnblogs_dump import backup, config, database, upload
-from cnblogs_dump.metaweblog import MetaWeblogClient
+from cnblogs_tools import backup, config, database, upload
+from cnblogs_tools.metaweblog import MetaWeblogClient
 
 
 class Handler(SimpleXMLRPCRequestHandler):

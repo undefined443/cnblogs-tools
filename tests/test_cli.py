@@ -10,8 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from cnblogs_dump import cli
-from cnblogs_dump.config import load_api_config
+from cnblogs_tools import cli
+from cnblogs_tools.config import load_api_config
 
 
 class CliTest(unittest.TestCase):

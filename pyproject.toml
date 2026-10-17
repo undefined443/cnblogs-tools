@@ -3,7 +3,7 @@ requires = ["uv_build>=0.13.1,<0.14"]
 build-backend = "uv_build"
 
 [project]
-name = "cnblogs-dump"
+name = "cnblogs-tools"
 version = "1.2.0"
 description = "Back up and update Cnblogs posts through MetaWeblog"
 readme = "README.md"
@@ -13,7 +13,7 @@ requires-python = ">=3.13"
 dependencies = ["python-dotenv>=1.2.4", "pyyaml>=6.0.3"]
 
 [project.scripts]
-cnblogs = "cnblogs_dump.cli:main"
+cnblogs = "cnblogs_tools.cli:main"
 
 [tool.black]
 line-length = 120

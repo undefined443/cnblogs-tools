@@ -1,4 +1,4 @@
-# CNblogs-dump
+# cnblogs-tools
 
 通过 MetaWeblog API 自动备份博客园文章，并上传本地编辑；无需手工下载 SQLite 备份。
 
