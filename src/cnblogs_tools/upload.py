@@ -3,13 +3,16 @@
 import datetime
 import json
 import xmlrpc.client
+from pathlib import Path
+from typing import Any
 
 import yaml
 
+from .metaweblog import MetaWeblogClient
 from .post_files import digest, parse_post, read_post, save_snapshot
 
 
-def _post_for_upload(metadata, body, original):
+def _post_for_upload(metadata: dict[str, Any], body: str, original: dict[str, Any]) -> dict[str, Any]:
     """Build an editable post while retaining returned extension fields."""
     fields = (
         "mt_text_more",
@@ -39,7 +42,7 @@ def _post_for_upload(metadata, body, original):
     return post
 
 
-def upload_posts(client, output_dir, dry_run=False):
+def upload_posts(client: MetaWeblogClient | None, output_dir: Path, dry_run: bool = False) -> None:
     """Upload local edits tracked by the complete database export.
 
     Args:
@@ -47,8 +50,8 @@ def upload_posts(client, output_dir, dry_run=False):
         output_dir: Directory containing posts and the complete export baseline.
         dry_run: List local changes without making network requests.
     """
-    snapshot = json.loads((output_dir / ".backup.json").read_text())
-    changes = []
+    snapshot: dict[str, Any] = json.loads((output_dir / ".backup.json").read_text())
+    changes: list[tuple[str, dict[str, Any], str, str]] = []
     for post_id, baseline in snapshot["posts"].items():
         target = output_dir / f"{post_id}.md"
         if not target.exists():
@@ -83,6 +86,7 @@ def upload_posts(client, output_dir, dry_run=False):
         if skipped_publish:
             print("Missing publish choice IDs: " + ", ".join(post_id for post_id, _ in skipped_publish))
         return
+    assert client is not None
     for post_id, metadata, body, content in uploadable:
         current = client.get_post(post_id)
         post = _post_for_upload(metadata, body, current)

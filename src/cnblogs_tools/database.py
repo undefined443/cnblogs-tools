@@ -8,11 +8,12 @@ import sqlite3
 import time
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import yaml
 
 
-def _parse_time(value):
+def _parse_time(value: str) -> int | None:
     """Parse a legacy SQLite timestamp, returning None for invalid values."""
     try:
         return int(time.mktime(datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S").timetuple()))
@@ -20,16 +21,16 @@ def _parse_time(value):
         return None
 
 
-def _read_database(path):
+def _read_database(path: Path) -> tuple[list[tuple[Any, ...]], list[str]]:
     """Read post rows and column names from a SQLite export."""
     with closing(sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)) as connection:
         cursor = connection.execute("SELECT * FROM blog_Content")
         blogs = cursor.fetchall()
-        columns = [description[0] for description in cursor.description]
+        columns = [description[0] for description in cursor.description or []]
     return blogs, columns
 
 
-def _render_blog(blog):
+def _render_blog(blog: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     """Render one database row as Markdown with YAML front matter."""
     front_matter = {
         "id": blog["Id"],
@@ -55,14 +56,19 @@ def _render_blog(blog):
     return content, front_matter
 
 
-def _export_blogs_to_markdown(blogs, columns, output_dir, previous=None):
+def _export_blogs_to_markdown(
+    blogs: list[tuple[Any, ...]],
+    columns: list[str],
+    output_dir: Path,
+    previous: dict[str, str] | None = None,
+) -> None:
     """Export rows and report local changes and remote conflicts."""
     output_dir.mkdir(parents=True, exist_ok=True)
     saved = 0
-    local_only = []
-    conflicts = []
-    untracked = []
-    baseline = {}
+    local_only: list[str] = []
+    conflicts: list[str] = []
+    untracked: list[str] = []
+    baseline: dict[str, dict[str, str]] = {}
     for row in blogs:
         blog = dict(zip(columns, row))
         content, front_matter = _render_blog(blog)
@@ -91,7 +97,7 @@ def _export_blogs_to_markdown(blogs, columns, output_dir, previous=None):
             if timestamp is not None:
                 os.utime(target, (timestamp, timestamp))
         saved += 1
-    snapshot = {"blog_id": str(dict(zip(columns, blogs[0]))["BlogId"]), "posts": baseline}
+    snapshot: dict[str, Any] = {"blog_id": str(dict(zip(columns, blogs[0]))["BlogId"]), "posts": baseline}
     temporary = output_dir / ".backup.json.tmp"
     temporary.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(output_dir / ".backup.json")
@@ -108,7 +114,7 @@ def _export_blogs_to_markdown(blogs, columns, output_dir, previous=None):
             print(f"{label} (post IDs): {', '.join(post_ids)}")
 
 
-def convert_database(output_dir, database_path=None):
+def convert_database(output_dir: Path, database_path: Path | None = None) -> None:
     """Convert the latest SQLite export and preserve edits against the prior export."""
     databases = sorted(Path("backups").glob("cnblogs_blog_*.db"), key=lambda path: path.stem.rsplit(".", 1)[-1])
     if database_path is None:
@@ -116,7 +122,7 @@ def convert_database(output_dir, database_path=None):
             raise FileNotFoundError("No matching database file found in backups/.")
         database_path = databases[-1]
     database_path = Path(database_path)
-    previous = {}
+    previous: dict[str, str] = {}
     older = [path for path in databases if path != database_path]
     if older:
         rows, columns = _read_database(older[-1])

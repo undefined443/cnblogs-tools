@@ -12,7 +12,7 @@ from .metaweblog import MetaWeblogClient
 from .upload import upload_posts
 
 
-def _run(args):
+def _run(args: argparse.Namespace) -> None:
     """Dispatch a parsed command without changing the working directory."""
     if args.dry_run:
         upload_posts(None, args.output, dry_run=True)
@@ -28,7 +28,7 @@ def _run(args):
             upload_posts(client, args.output)
 
 
-def main():
+def main() -> None:
     """Run a command and report configuration, transport, or API errors."""
     parser = argparse.ArgumentParser(
         description="Back up complete Cnblogs exports and update posts through MetaWeblog."

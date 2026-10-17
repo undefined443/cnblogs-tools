@@ -10,7 +10,7 @@ from urllib.request import urlopen
 from .post_files import parse_post, read_post
 
 
-def _download_image(url, image_dir):
+def _download_image(url: str, image_dir: Path) -> str:
     """Cache an image atomically, retaining its dated path to avoid collisions."""
     relative = Path(urlsplit(url).path.lstrip("/"))
     target = image_dir / relative
@@ -30,7 +30,7 @@ def _download_image(url, image_dir):
     return relative.as_posix()
 
 
-def migrate_images(output_dir, endpoint, image_dir=Path("image-hosting")):
+def migrate_images(output_dir: Path, endpoint: str, image_dir: Path = Path("image-hosting")) -> None:
     """Download matching SM.MS images and replace URLs in post bodies.
 
     Args:

@@ -9,6 +9,7 @@ import time
 import zipfile
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
@@ -19,15 +20,15 @@ _EXPORT = "https://export.cnblogs.com"
 class _RedirectHandler(HTTPRedirectHandler):
     """Remove authorization when a download redirects to another host."""
 
-    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
-        redirected = super().redirect_request(request, file_pointer, code, message, headers, new_url)
-        if redirected is not None and urlsplit(request.full_url).hostname != urlsplit(new_url).hostname:
+    def redirect_request(self, req: Request, fp: Any, code: Any, msg: Any, headers: Any, newurl: str) -> Any:
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urlsplit(req.full_url).hostname != urlsplit(newurl).hostname:
             redirected.remove_header("Authorization")
             redirected.remove_header("Authorization-type")
         return redirected
 
 
-def _request_json(url, config, data=None):
+def _request_json(url: str, config: Any, data: bytes | None = None) -> Any:
     """Send an authenticated request to the backup API."""
     request = Request(
         url,
@@ -42,7 +43,7 @@ def _request_json(url, config, data=None):
         return json.load(response)
 
 
-def _get_export(config):
+def _get_export(config: Any) -> dict[str, Any]:
     """Use today's export or create and wait for today's backup task."""
     records = _request_json(f"{_API}?pageIndex=1&pageSize=10", config)["items"]
     if not records:
@@ -65,7 +66,7 @@ def _get_export(config):
     return current
 
 
-def download_database(config, backup_dir):
+def download_database(config: Any, backup_dir: Path) -> Path:
     """Download, validate, and save the latest complete SQLite export."""
     record = _get_export(config)
     filename = Path(record["fileName"]).name

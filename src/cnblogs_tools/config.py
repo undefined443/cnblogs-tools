@@ -15,7 +15,7 @@ class ApiConfig:
     endpoint: str
 
 
-def load_api_config():
+def load_api_config() -> ApiConfig:
     """Read API settings, preferring existing environment variables."""
     load_dotenv(".env", override=False)
     username = os.environ.get("CNBLOGS_USERNAME") or os.environ.get("USERNAME", "")
@@ -27,7 +27,7 @@ def load_api_config():
     return ApiConfig(username, token, endpoint)
 
 
-def load_image_endpoint():
+def load_image_endpoint() -> str:
     """Read the image hosting base URL without requiring API credentials."""
     load_dotenv(".env", override=False)
     endpoint = os.environ.get("ENDPOINT", "").rstrip("/")
