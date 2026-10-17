@@ -3,12 +3,12 @@
 import contextlib
 import io
 import os
-from pathlib import Path
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 

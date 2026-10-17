@@ -5,13 +5,13 @@ import copy
 import io
 import json
 import os
-from pathlib import Path
 import sqlite3
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
 import xmlrpc.client
+from pathlib import Path
+from unittest.mock import patch
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
 from cnblogs_tools import backup, config, database, upload

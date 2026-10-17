@@ -3,8 +3,8 @@
 import hashlib
 import json
 import re
-from urllib.parse import urlsplit
 import xmlrpc.client
+from urllib.parse import urlsplit
 
 import yaml
 

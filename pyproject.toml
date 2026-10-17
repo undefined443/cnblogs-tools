@@ -19,8 +19,15 @@ cnblogs = "cnblogs_tools.cli:main"
 line-length = 120
 target-version = ["py313"]
 
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["F", "I"]
+
 [dependency-groups]
-dev = ["black>=26.10.1", "pre-commit>=4.7.0"]
+dev = ["black>=26.10.1", "pre-commit>=4.7.0", "ruff>=0.17.1"]
 
 [[tool.uv.index]]
 name = "pypi"

@@ -1,9 +1,9 @@
 """Download referenced images and migrate URLs in local post bodies."""
 
-from pathlib import Path
 import re
 import shutil
 import tempfile
+from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 

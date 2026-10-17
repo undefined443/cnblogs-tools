@@ -1,7 +1,7 @@
 """Load CLI configuration from the working directory and environment."""
 
-from dataclasses import dataclass, field
 import os
+from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 

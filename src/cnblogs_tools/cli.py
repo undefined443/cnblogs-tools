@@ -1,8 +1,8 @@
 """Parse CLI arguments and dispatch commands to their implementation modules."""
 
 import argparse
-from pathlib import Path
 import xmlrpc.client
+from pathlib import Path
 
 from .backup import backup_posts
 from .config import load_api_config, load_image_endpoint
