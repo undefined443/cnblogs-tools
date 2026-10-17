@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from pathlib import Path
 import re
 from urllib.parse import urlsplit
 import xmlrpc.client

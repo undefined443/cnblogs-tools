@@ -38,7 +38,7 @@ class MetaWeblogClient:
         """Return this client for use in a context manager."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, _exc_type, _exc_value, _traceback):
         """Close the underlying HTTP connection."""
         self.close()
 
