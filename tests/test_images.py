@@ -8,6 +8,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 from urllib.parse import urlsplit
 from urllib.request import urlopen
@@ -20,15 +21,15 @@ class ImagesTest(unittest.TestCase):
 
     def setUp(self):
         """Create isolated files and a local service for each test."""
-        self.temp = tempfile.TemporaryDirectory()
-        self.posts = Path(self.temp.name) / "blogs"
+        self.temp: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+        self.posts: Path = Path(self.temp.name) / "blogs"
         self.posts.mkdir()
-        self.images = Path(self.temp.name) / "image-hosting"
-        self.requests = []
+        self.images: Path = Path(self.temp.name) / "image-hosting"
+        self.requests: list[str] = []
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
-            def do_GET(self):
+            def do_GET(self) -> None:
                 """Serve image bytes or a deliberate HTTP failure."""
                 owner.requests.append(self.path)
                 if self.path.endswith("missing.png"):
@@ -40,17 +41,19 @@ class ImagesTest(unittest.TestCase):
                 self.end_headers()
                 self.wfile.write(body)
 
-            def log_message(self, *_args):
+            def log_message(self, format: str, *args: Any) -> None:
                 """Keep HTTP fixture logs out of test output."""
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.server: ThreadingHTTPServer = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread: threading.Thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         base = f"http://127.0.0.1:{self.server.server_port}"
-        self.fetch = patch.object(
-            images, "urlopen", side_effect=lambda url, timeout: urlopen(base + urlsplit(url).path, timeout=timeout)
-        )
+
+        def fetch_image(url: str, timeout: float) -> Any:
+            return urlopen(base + urlsplit(url).path, timeout=timeout)
+
+        self.fetch = patch.object(images, "urlopen", side_effect=fetch_image)
         self.fetch.start()
 
     def tearDown(self):

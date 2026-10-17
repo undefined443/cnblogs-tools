@@ -11,6 +11,7 @@ import threading
 import unittest
 import xmlrpc.client
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 from xmlrpc.server import SimpleXMLRPCRequestHandler, SimpleXMLRPCServer
 
@@ -33,9 +34,9 @@ class UploadTest(unittest.TestCase):
         """Create isolated files and a local service for each test."""
         self.temp = tempfile.TemporaryDirectory()
         self.output = Path(self.temp.name) / "blogs"
-        self._edits = []
-        self.failure = False
-        self.posts = {
+        self._edits: list[tuple[str, dict[str, Any], bool]] = []
+        self.failure: bool = False
+        self.posts: dict[str, dict[str, Any]] = {
             "1": {
                 "postid": 1,
                 "title": "A & <B>",
@@ -57,13 +58,13 @@ class UploadTest(unittest.TestCase):
                 "mt_text_more": "",
             },
         }
-        self.http = SimpleXMLRPCServer(("127.0.0.1", 0), requestHandler=Handler, logRequests=False)
-        self.http.register_function(self._get_post, "metaWeblog.getPost")
-        self.http.register_function(self._edit_post, "metaWeblog.editPost")
-        self.thread = threading.Thread(target=self.http.serve_forever, daemon=True)
+        self.http: SimpleXMLRPCServer = SimpleXMLRPCServer(("127.0.0.1", 0), requestHandler=Handler, logRequests=False)
+        self.http.register_function(cast(Any, self._get_post), "metaWeblog.getPost")
+        self.http.register_function(cast(Any, self._edit_post), "metaWeblog.editPost")
+        self.thread: threading.Thread = threading.Thread(target=self.http.serve_forever, daemon=True)
         self.thread.start()
-        self.endpoint = f"http://127.0.0.1:{self.http.server_address[1]}/metaweblog/example"
-        self.client = MetaWeblogClient(config.ApiConfig("login", "secret<&>", self.endpoint))
+        self.endpoint: str = f"http://127.0.0.1:{self.http.server_address[1]}/metaweblog/example"
+        self.client: MetaWeblogClient = MetaWeblogClient(config.ApiConfig("login", "secret<&>", self.endpoint))
 
     def tearDown(self):
         """Close the local service and remove temporary files."""
@@ -73,17 +74,17 @@ class UploadTest(unittest.TestCase):
         self.thread.join()
         self.temp.cleanup()
 
-    def _auth(self, username, token):
+    def _auth(self, username: str, token: str) -> None:
         """Verify credentials decoded from the XML-RPC request."""
         self.assertEqual((username, token), ("login", "secret<&>"))
 
-    def _get_post(self, post_id, username, token):
+    def _get_post(self, post_id: str, username: str, token: str) -> dict[str, Any]:
         """Return a fixture post after validating its ID type."""
         self._auth(username, token)
         self.assertIsInstance(post_id, str)
         return self.posts[post_id]
 
-    def _edit_post(self, post_id, username, token, post, publish):
+    def _edit_post(self, post_id: str, username: str, token: str, post: dict[str, Any], publish: bool) -> bool:
         """Record an update and simulate success or an API fault."""
         self._auth(username, token)
         self._edits.append((post_id, copy.deepcopy(post), publish))
@@ -92,10 +93,10 @@ class UploadTest(unittest.TestCase):
         self.posts[post_id].update(post)
         return True
 
-    def _backup(self):
+    def _backup(self) -> None:
         """Create a complete-export baseline for the fixture posts."""
         self.output.mkdir(parents=True, exist_ok=True)
-        snapshot = {"blog_id": "42", "posts": {}}
+        snapshot: dict[str, Any] = {"blog_id": "42", "posts": {}}
         for post_id, post in self.posts.items():
             metadata = {
                 "id": int(post_id),
@@ -114,12 +115,12 @@ class UploadTest(unittest.TestCase):
             snapshot["posts"][post_id] = {"hash": post_files.digest(content)}
         (self.output / ".backup.json").write_text(json.dumps(snapshot), encoding="utf-8")
 
-    def _upload(self, dry_run=False):
+    def _upload(self, dry_run: bool = False) -> None:
         """Run an upload or local dry-run without progress output."""
         with contextlib.redirect_stdout(io.StringIO()):
             upload.upload_posts(None if dry_run else self.client, self.output, dry_run)
 
-    def _edit(self, post_id="1", publish=True):
+    def _edit(self, post_id: str = "1", publish: bool = True) -> None:
         """Modify a fixture post and explicitly choose its publication flag."""
         target = self.output / f"{post_id}.md"
         metadata, body = post_files.parse_post(post_files.read_post(target))
@@ -312,7 +313,7 @@ class UploadTest(unittest.TestCase):
         older = backup_dir / "cnblogs_blog_test.20260701015053.db"
         with contextlib.closing(sqlite3.connect(older)) as db, db:
             db.execute("CREATE TABLE blog_Content (" + ",".join(columns) + ")")
-            older_row = list(row)
+            older_row: list[object] = list(row)
             older_row[1] = "Older"
             older_row[-1] = "Older export"
             db.execute("INSERT INTO blog_Content VALUES (" + ",".join("?" for _ in row) + ")", older_row)

@@ -10,6 +10,17 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Utilities",
+]
 dependencies = ["python-dotenv>=1.2.4", "pyyaml>=6.0.3"]
 
 [project.scripts]
@@ -27,7 +38,7 @@ target-version = "py313"
 select = ["F", "I"]
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests"]
 pythonVersion = "3.13"
 typeCheckingMode = "strict"
 
