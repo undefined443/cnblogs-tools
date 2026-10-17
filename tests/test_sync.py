@@ -279,6 +279,12 @@ class SyncTest(unittest.TestCase):
         finally:
             os.chdir(previous)
 
+    def test_database_requires_backup_directory(self):
+        """Report the expected location when there are no backups."""
+        with contextlib.chdir(self.temp.name):
+            with self.assertRaisesRegex(FileNotFoundError, "backups/"):
+                database.convert_database(self.output)
+
     def test_legacy_sqlite_conversion(self):
         """Verify legacy sqlite conversion."""
         columns = [
@@ -315,10 +321,19 @@ class SyncTest(unittest.TestCase):
             "",
             "# Legacy",
         )
-        db_path = Path(self.temp.name) / "cnblogs_blog_test.db"
+        backup_dir = Path(self.temp.name) / "backups"
+        backup_dir.mkdir()
+        db_path = backup_dir / "cnblogs_blog_test.20261017141356.db"
         with sqlite3.connect(db_path) as db:
             db.execute("CREATE TABLE blog_Content (" + ",".join(columns) + ")")
             db.execute("INSERT INTO blog_Content VALUES (" + ",".join("?" for _ in row) + ")", row)
+        # A newer filesystem timestamp must not override the export timestamp.
+        older = backup_dir / "cnblogs_blog_test.20260701015053.db"
+        with sqlite3.connect(older) as db:
+            db.execute("CREATE TABLE blog_Content (Body)")
+            db.execute("INSERT INTO blog_Content VALUES ('Older export')")
+        os.utime(db_path, (1, 1))
+        (Path(self.temp.name) / "cnblogs_blog_test.20270101000000.db").write_text("Ignore root files")
         previous = Path.cwd()
         os.chdir(self.temp.name)
         try:

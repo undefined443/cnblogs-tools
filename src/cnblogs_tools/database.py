@@ -1,10 +1,10 @@
 """Convert legacy Cnblogs SQLite exports to local post files."""
 
 import datetime
-import glob
 import os
 import sqlite3
 import time
+from pathlib import Path
 
 import yaml
 
@@ -18,11 +18,11 @@ def _parse_time(t):
 
 
 def _load_blogs_from_db():
-    """Read post rows and column names from the first matching SQLite export."""
-    db_files = glob.glob("cnblogs_blog_*.db")
+    """Read the latest export in backups, ordered by its filename timestamp."""
+    db_files = sorted(Path("backups").glob("cnblogs_blog_*.db"), key=lambda path: path.stem.rsplit(".", 1)[-1])
     if not db_files:
-        raise FileNotFoundError("No matching database file found.")
-    conn = sqlite3.connect(db_files[0])
+        raise FileNotFoundError("No matching database file found in backups/.")
+    conn = sqlite3.connect(db_files[-1].resolve().as_uri() + "?mode=ro", uri=True)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM blog_Content")
     blogs = cursor.fetchall()
@@ -88,6 +88,6 @@ def _export_blogs_to_markdown(blogs, columns, output_dir="blogs"):
 
 
 def convert_database(output_dir):
-    """Convert the first SQLite export in the working directory."""
+    """Convert the latest SQLite export from the backups directory."""
     blogs, columns = _load_blogs_from_db()
     _export_blogs_to_markdown(blogs, columns, str(output_dir))

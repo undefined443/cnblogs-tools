@@ -49,7 +49,7 @@ uv run cnblogs images
 
 图片下载到 `image-hosting/`，正文链接替换为新地址。图片部署和文章上传需另行完成。
 
-将 `cnblogs_blog_*.db` 放在当前目录，可转换为文章文件：
+将 `cnblogs_blog_*.db` 放入 `backups/`，转换时自动选择文件名日期最新的备份：
 
 ```sh
 uv run cnblogs database --output legacy-blogs
