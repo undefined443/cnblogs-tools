@@ -26,10 +26,6 @@ dependencies = ["python-dotenv>=1.2.4", "pyyaml>=6.0.3"]
 [project.scripts]
 cnblogs = "cnblogs_tools.cli:main"
 
-[tool.black]
-line-length = 120
-target-version = ["py313"]
-
 [tool.ruff]
 line-length = 120
 target-version = "py313"
@@ -43,12 +39,7 @@ pythonVersion = "3.13"
 typeCheckingMode = "strict"
 
 [dependency-groups]
-dev = [
-  "black>=26.10.1",
-  "pre-commit>=4.7.0",
-  "pyright>=1.1.414",
-  "ruff>=0.17.1",
-]
+dev = ["pre-commit>=4.7.0", "pyright>=1.1.414", "ruff>=0.17.1"]
 
 [[tool.uv.index]]
 name = "pypi"
