@@ -62,27 +62,30 @@ def upload_posts(client, output_dir, dry_run=False):
         changes.append((post_id, metadata, body, content))
     if changes:
         print("MetaWeblog cannot verify access permissions; publish does not mean public/private.")
+    skipped_permissions = [
+        (post_id, metadata) for post_id, metadata, _, _ in changes if metadata.get("access_permission") != "Anonymous"
+    ]
+    skipped_publish = [
+        (post_id, metadata)
+        for post_id, metadata, _, _ in changes
+        if metadata.get("access_permission") == "Anonymous" and type(metadata.get("publish")) is not bool
+    ]
+    uploadable = [
+        item
+        for item in changes
+        if item[1].get("access_permission") == "Anonymous" and type(item[1].get("publish")) is bool
+    ]
     if dry_run:
-        for post_id, metadata, _, _ in changes:
-            permission = metadata.get("access_permission")
-            status = "Would update" if permission == "Anonymous" else "Blocked"
-            print(f"{status} {post_id}; publish={metadata.get('publish')!r}; access_permission={permission!r}")
-        print(f"Dry run: {len(changes)} changed posts; no network requests made.")
-        return
-    # Reject private and unverified posts before making any remote requests.
-    blocked = [post_id for post_id, metadata, _, _ in changes if metadata.get("access_permission") != "Anonymous"]
-    if blocked:
-        raise ValueError(
-            "Upload blocked for private or unknown access permissions: "
-            + ", ".join(blocked)
-            + ". Only upload confirmed public posts (access_permission: Anonymous); "
-            "publish controls publication, not visibility."
+        print(
+            f"Dry run: {len(uploadable)} public posts ready; {len(skipped_permissions)} private or unknown skipped; "
+            f"{len(skipped_publish)} need an explicit publish choice. No network requests made."
         )
-    # Validate every publication choice before updating any remote post.
-    missing = [post_id for post_id, metadata, _, _ in changes if type(metadata.get("publish")) is not bool]
-    if missing:
-        raise ValueError("Set publish to true or false before uploading: " + ", ".join(missing))
-    for post_id, metadata, body, content in changes:
+        if skipped_permissions:
+            print("Private or unknown IDs: " + ", ".join(post_id for post_id, _ in skipped_permissions))
+        if skipped_publish:
+            print("Missing publish choice IDs: " + ", ".join(post_id for post_id, _ in skipped_publish))
+        return
+    for post_id, metadata, body, content in uploadable:
         current = client.get_post(post_id)
         post = _post_for_upload(metadata, body, current)
         result = client.edit_post(post_id, post, metadata["publish"])
@@ -94,5 +97,11 @@ def upload_posts(client, output_dir, dry_run=False):
         target.write_text(content, encoding="utf-8", newline="")
         snapshot["posts"][post_id] = {"hash": digest(content)}
         save_snapshot(output_dir, snapshot)
-        print(f"Updated post {post_id}.")
-    print(f"Uploaded {len(changes)} changed posts.")
+    print(
+        f"Uploaded {len(uploadable)} posts; skipped {len(skipped_permissions)} private or unknown and "
+        f"{len(skipped_publish)} without an explicit publish choice."
+    )
+    if skipped_permissions:
+        print("Private or unknown IDs: " + ", ".join(post_id for post_id, _ in skipped_permissions))
+    if skipped_publish:
+        print("Missing publish choice IDs: " + ", ".join(post_id for post_id, _ in skipped_publish))

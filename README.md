@@ -39,7 +39,7 @@ uv run cnblogs upload --dry-run
 uv run cnblogs upload
 ```
 
-仅支持上传公开文章，需设置 `access_permission: Anonymous`。`publish: false` 不保证撤回已发布文章。
+上传会跳过权限不是 `Anonymous` 或未明确设置 `publish` 的文章，并报告跳过原因。`publish: false` 不保证撤回已发布文章。
 
 迁移正文中的 `s2.loli.net` 图片，需先在 `.env` 中设置 `ENDPOINT="https://your-image-host.example.com"`：
 

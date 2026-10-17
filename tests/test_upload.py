@@ -166,8 +166,8 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("[Markdown]", self._edits[0][1]["categories"])
         self.assertTrue(self._edits[0][1]["description"].startswith("<p>"))
 
-    def test_missing_publish_prevents_all_updates(self):
-        """Verify missing publish prevents all updates."""
+    def test_missing_publish_skips_only_that_post(self):
+        """Verify a post without explicit publication intent is skipped."""
         self._backup()
         self._edit("1")
         target = self.output / "2.md"
@@ -175,14 +175,13 @@ class UploadTest(unittest.TestCase):
             post_files.read_post(target).replace("access_permission: null", "access_permission: Anonymous")
             + "\nChanged"
         )
-        with self.assertRaisesRegex(ValueError, "Set publish"):
-            self._upload()
-        self.assertEqual(self._edits, [])
+        self._upload()
+        self.assertEqual([edit[0] for edit in self._edits], ["1"])
         self._upload(dry_run=True)
-        self.assertEqual(self._edits, [])
+        self.assertEqual([edit[0] for edit in self._edits], ["1"])
 
-    def test_private_permissions_block_entire_batch(self):
-        """Reject a mixed batch before reading or writing any remote post."""
+    def test_private_permission_skips_only_that_post(self):
+        """Skip private posts while uploading eligible public posts."""
         self._backup()
         self._edit("1")
         self._edit("2", publish=False)
@@ -191,13 +190,12 @@ class UploadTest(unittest.TestCase):
             post_files.read_post(target).replace("access_permission: Anonymous", "access_permission: OwnerByUser")
         )
         with patch.object(self.client, "get_post") as get_post:
-            with self.assertRaisesRegex(ValueError, "Upload blocked.*2"):
-                self._upload()
-            get_post.assert_not_called()
-        self.assertEqual(self._edits, [])
+            self._upload()
+            get_post.assert_called_once_with("1")
+        self.assertEqual([edit[0] for edit in self._edits], ["1"])
 
-    def test_unknown_permissions_block_upload(self):
-        """Require explicit visibility confirmation for new and older backups."""
+    def test_unknown_permissions_skip_upload(self):
+        """Skip posts with missing or unknown visibility metadata."""
         self._backup()
         self._edit()
         target = self.output / "1.md"
@@ -205,11 +203,10 @@ class UploadTest(unittest.TestCase):
         for permission in ("access_permission: null\n", ""):
             with self.subTest(permission=permission):
                 target.write_text(original.replace("access_permission: Anonymous\n", permission))
-                with self.assertRaisesRegex(ValueError, "Upload blocked.*1"):
-                    self._upload()
+                self._upload()
         self.assertEqual(self._edits, [])
 
-    def test_dry_run_reports_blocked_permissions_without_network(self):
+    def test_dry_run_reports_skipped_permissions_without_network(self):
         """Show visibility restrictions without requiring a live client."""
         self._backup()
         self._edit()
@@ -220,8 +217,8 @@ class UploadTest(unittest.TestCase):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             upload.upload_posts(None, self.output, dry_run=True)
-        self.assertIn("Blocked 1", output.getvalue())
-        self.assertIn("OwnerByUser", output.getvalue())
+        self.assertIn("1 private or unknown skipped", output.getvalue())
+        self.assertIn("Private or unknown IDs: 1", output.getvalue())
         self.assertEqual(self._edits, [])
 
     def test_upload_uses_current_remote_fields(self):
