@@ -2,6 +2,12 @@
 
 通过 MetaWeblog API 自动备份博客园文章，并上传本地编辑；无需手工下载 SQLite 备份。
 
+## 安装
+
+在项目目录运行 `uv sync` 后，可通过 `uv run cnblogs --help` 查看命令。也可以用 `uv tool install .` 安装为独立命令，再运行 `cnblogs backup` 等子命令。
+
+`.env`、文章目录和图片目录均相对于运行命令时的当前目录，与安装位置无关。
+
 ## 配置
 
 安装 [uv](https://docs.astral.sh/uv/)，在项目根目录的 `.env` 中配置，或设置同名环境变量：
@@ -19,7 +25,7 @@ CNBLOGS_BLOG_NAME="your_blog_name"
 ## 备份
 
 ```sh
-uv run cnblogs.py backup
+uv run cnblogs backup
 ```
 
 文章保存为 `blogs/<id>.md`，包含 YAML front matter 和接口返回的原始正文。Markdown 与 HTML 正文均保留原样，不做格式转换。`blogs/.backup.json` 保存原始响应和内容哈希，用于识别本地编辑、检测远端冲突及判断上传是否成功，不包含 token。
@@ -29,7 +35,7 @@ uv run cnblogs.py backup
 可指定目录和请求篇数：
 
 ```sh
-uv run cnblogs.py backup --output backups --count 1000
+uv run cnblogs backup --output backups --count 1000
 ```
 
 备份范围是 `getRecentPosts` 实际返回的文章及元数据；接口没有分页参数或总数，不保证覆盖全部历史、草稿和其他内容。当前实测最多返回 300 篇，无法覆盖此账号的全部文章；全量备份问题尚未解决，不能将其视为完整的后台数据库导出。评论、附件文件、访问权限和 SQLite 中的全部后台字段不在此备份范围；图片链接保留在正文中，不自动下载图片。
@@ -43,8 +49,8 @@ MetaWeblog 的读取结果不提供可靠的发布状态，因此备份中的 `p
 先预览改动，再执行上传：
 
 ```sh
-uv run cnblogs.py upload --dry-run
-uv run cnblogs.py upload
+uv run cnblogs upload --dry-run
+uv run cnblogs upload
 ```
 
 Dry-run 只检查本地文件，不读取凭据或调用接口。实际上传仅处理相对快照有改动的文章，并在写入前检查所有待上传文章的 `publish` 和远端冲突。成功后更新本地快照，重复运行不会重复上传。远端冲突检查与写入不是原子操作，期间仍应避免同时在网页编辑同一篇文章。
@@ -60,7 +66,7 @@ ENDPOINT="https://your-image-host.example.com"
 下载正文中的 `https://s2.loli.net/<年>/<月>/<日>/<文件名>` 图片，并替换为新地址：
 
 ```sh
-uv run cnblogs.py images
+uv run cnblogs images
 ```
 
 图片保存到 `image-hosting/<年>/<月>/<日>/<文件名>`，正文链接改为 `${ENDPOINT}/image-hosting/<年>/<月>/<日>/<文件名>`。仅在一篇文章的所有图片下载成功后修改其正文，保留 front matter；已有图片不重复下载。可用 `--output` 指定文章目录。
@@ -72,7 +78,7 @@ uv run cnblogs.py images
 原 SQLite 转换功能仍可使用：将 `cnblogs_blog_*.db` 放在项目根目录后运行：
 
 ```sh
-uv run cnblogs.py database --output legacy-blogs
+uv run cnblogs database --output legacy-blogs
 ```
 
 SQLite 转换不生成 MetaWeblog 同步快照。通过 API 重新备份到一个新目录后，再迁入本地编辑并上传。
@@ -92,6 +98,12 @@ uv run pre-commit run --all-files
 ```
 
 Black 负责 Python，Prettier 负责 Markdown、JSON 和 YAML，Taplo 负责 TOML。Prettier 及其 Node 环境由 pre-commit 管理，无需运行 `npm install`。
+
+运行测试（使用本地模拟接口，不访问或修改博客园）：
+
+```sh
+uv run -m unittest discover -s tests
+```
 
 ## 接口参考
 

@@ -1,10 +1,19 @@
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
+
 [project]
 name = "cnblogs-dump"
 version = "1.2.0"
 description = "Back up and update Cnblogs posts through MetaWeblog"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = ["python-dotenv>=1.2.4", "pyyaml>=6.0.3"]
+
+[project.scripts]
+cnblogs = "cnblogs_dump.cli:main"
 
 [tool.black]
 line-length = 120
@@ -17,3 +26,6 @@ dev = ["black>=26.10.1", "pre-commit>=4.7.0"]
 name = "pypi"
 url = "https://pypi.org/simple"
 default = true
+
+[tool.uv.build-backend]
+source-include = ["tests/**"]

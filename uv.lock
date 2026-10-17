@@ -50,7 +50,7 @@ wheels = [
 [[package]]
 name = "cnblogs-dump"
 version = "1.2.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
