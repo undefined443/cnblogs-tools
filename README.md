@@ -69,3 +69,5 @@ uv run -m unittest discover -s tests
 
 - [MetaWeblog](docs/metaweblog.md)
 - [OpenAPI](docs/openapi.yaml)
+
+更多接口实现可参考[博客园官方 VSCode 插件](https://github.com/cnblogs/vscode-cnb)。
